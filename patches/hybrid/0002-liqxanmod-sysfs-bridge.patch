@@ -4,32 +4,32 @@ Subject: [PATCH 2/3] liqxanmod: expose scheduler tunables via sysfs bridge
 Adds /sys/kernel/liqxanmod/ with the following attributes:
 
   active_profile   rw  "throughput" | "latency" | "balanced"
-  zen_latency_ns   rw  Zen sched_latency_ns (nanoseconds)
-  zen_burst_ns     rw  Zen sched_min_granularity_ns
-  xanmod_nr_lat    rw  XanMod sched_nr_latency
+  base_slice_ns    rw  sysctl_sched_base_slice (nanoseconds)
   autodetect       rw  "1" to enable runtime switching, "0" to pin profile
 
-Writing active_profile immediately applies the corresponding tunable set.
-The autodetect module writes this file every 100 ms when autodetect=1.
+Updated for XanMod 6.19+ scheduler API: uses sysctl_sched_base_slice
+(replaces the removed sysctl_sched_latency / sched_nr_latency API).
 
 --- a/kernel/sched/Makefile
 +++ b/kernel/sched/Makefile
-@@ -30,3 +30,4 @@ obj-$(CONFIG_SCHED_AUTOGROUP) += autogroup.o
- obj-$(CONFIG_SCHEDSTATS) += stats.o
- obj-$(CONFIG_SCHED_DEBUG) += debug.o
- obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
+@@ -37,3 +37,4 @@ obj-y += core.o
+ obj-y += fair.o
+ obj-y += build_policy.o
+ obj-y += build_utility.o
 +obj-$(CONFIG_LIQXANMOD_HYBRID) += liqxanmod_sysfs.o
 
 --- /dev/null
 +++ b/kernel/sched/liqxanmod_sysfs.c
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,175 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * kernel/sched/liqxanmod_sysfs.c
 + *
-+ * Sysfs bridge exposing XanMod and Zen scheduler tunables under
++ * Sysfs bridge exposing XanMod scheduler tunables under
 + * /sys/kernel/liqxanmod/ and providing the active_profile switch used
 + * by the runtime autodetect module.
++ *
++ * Uses sysctl_sched_base_slice (XanMod 6.19+ scheduler API).
 + */
 +
 +#include <linux/kernel.h>
@@ -53,42 +53,27 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +/* ── Tunable sets ──────────────────────────────────────────────────────────── */
 +
 +struct lqxm_tunable_set {
-+	unsigned int latency_ns;        /* sysctl_sched_latency */
-+	unsigned int min_granularity_ns;/* sysctl_sched_min_granularity */
-+	unsigned int wakeup_granularity_ns;
-+	unsigned int nr_latency;        /* sched_nr_latency */
++	unsigned int base_slice_ns;     /* sysctl_sched_base_slice */
 +};
 +
 +/* XanMod throughput profile — wider slices, higher throughput */
 +static const struct lqxm_tunable_set tunable_throughput = {
-+	.latency_ns            = 10000000,  /* 10 ms */
-+	.min_granularity_ns    = 1000000,   /*  1 ms */
-+	.wakeup_granularity_ns = 1500000,   /*  1.5 ms */
-+	.nr_latency            = 10,
++	.base_slice_ns = 2000000,   /* 2 ms */
 +};
 +
 +/* Zen/Liquorix latency profile — narrow slices, low wakeup latency */
 +static const struct lqxm_tunable_set tunable_latency = {
-+	.latency_ns            = 4000000,   /*  4 ms */
-+	.min_granularity_ns    = 300000,    /*  0.3 ms */
-+	.wakeup_granularity_ns = 500000,    /*  0.5 ms */
-+	.nr_latency            = 4,
++	.base_slice_ns = 300000,    /* 0.3 ms */
 +};
 +
 +/* Balanced — midpoint, suitable for mixed desktop/compile workloads */
 +static const struct lqxm_tunable_set tunable_balanced = {
-+	.latency_ns            = 6000000,   /*  6 ms */
-+	.min_granularity_ns    = 750000,    /*  0.75 ms */
-+	.wakeup_granularity_ns = 1000000,   /*  1 ms */
-+	.nr_latency            = 8,
++	.base_slice_ns = 700000,    /* 0.7 ms (kernel default) */
 +};
 +
 +static void apply_tunable_set(const struct lqxm_tunable_set *t)
 +{
-+	sysctl_sched_latency            = t->latency_ns;
-+	sysctl_sched_min_granularity    = t->min_granularity_ns;
-+	sysctl_sched_wakeup_granularity = t->wakeup_granularity_ns;
-+	sched_nr_latency                = t->nr_latency;
++	sysctl_sched_base_slice = t->base_slice_ns;
 +}
 +
 +void lqxm_apply_profile(enum lqxm_profile p)
@@ -110,6 +95,7 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +				   struct kobj_attribute *attr, char *buf)
 +{
 +	const char *name;
++
 +	switch (current_profile) {
 +	case LQXM_THROUGHPUT: name = "throughput"; break;
 +	case LQXM_LATENCY:    name = "latency";    break;
@@ -124,9 +110,9 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +{
 +	char tmp[16];
 +	size_t len = min(count, sizeof(tmp) - 1);
++
 +	memcpy(tmp, buf, len);
 +	tmp[len] = '\0';
-+	/* strip trailing newline */
 +	if (len > 0 && tmp[len - 1] == '\n')
 +		tmp[--len] = '\0';
 +
@@ -142,6 +128,26 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +	return count;
 +}
 +
++static ssize_t base_slice_ns_show(struct kobject *kobj,
++				  struct kobj_attribute *attr, char *buf)
++{
++	return sysfs_emit(buf, "%u\n", sysctl_sched_base_slice);
++}
++
++static ssize_t base_slice_ns_store(struct kobject *kobj,
++				   struct kobj_attribute *attr,
++				   const char *buf, size_t count)
++{
++	unsigned int val;
++
++	if (kstrtouint(buf, 10, &val))
++		return -EINVAL;
++	if (val < 100000 || val > 100000000)
++		return -ERANGE;
++	sysctl_sched_base_slice = val;
++	return count;
++}
++
 +static ssize_t autodetect_show(struct kobject *kobj,
 +			       struct kobj_attribute *attr, char *buf)
 +{
@@ -153,6 +159,7 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +				const char *buf, size_t count)
 +{
 +	int val;
++
 +	if (kstrtoint(buf, 10, &val))
 +		return -EINVAL;
 +	autodetect_enabled = (val != 0);
@@ -167,11 +174,14 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +
 +static struct kobj_attribute attr_active_profile =
 +	__ATTR(active_profile, 0644, active_profile_show, active_profile_store);
++static struct kobj_attribute attr_base_slice_ns =
++	__ATTR(base_slice_ns, 0644, base_slice_ns_show, base_slice_ns_store);
 +static struct kobj_attribute attr_autodetect =
 +	__ATTR(autodetect, 0644, autodetect_show, autodetect_store);
 +
 +static struct attribute *lqxm_attrs[] = {
 +	&attr_active_profile.attr,
++	&attr_base_slice_ns.attr,
 +	&attr_autodetect.attr,
 +	NULL,
 +};
@@ -196,7 +206,6 @@ The autodetect module writes this file every 100 ms when autodetect=1.
 +		return ret;
 +	}
 +
-+	/* Apply balanced profile at boot */
 +	lqxm_apply_profile(LQXM_BALANCED);
 +	pr_info("liqxanmod: sysfs bridge active at /sys/kernel/liqxanmod/\n");
 +	return 0;
