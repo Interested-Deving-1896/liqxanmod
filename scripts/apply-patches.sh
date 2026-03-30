@@ -66,17 +66,19 @@ apply_series() {
     fi
 
     # If the patch filename encodes a stable-point-release version
-    # (e.g. v6.19.10-lqx2.patch) that the tree already satisfies,
-    # skip it unconditionally — applying it would produce mass rejects.
+    # (e.g. v6.18.16-lqx1.patch), check whether the tree is already at
+    # the same major.minor series. XanMod always tracks stable, so the
+    # Liquorix zen patch (which backports stable commits) will always
+    # conflict — skip it when the series matches.
     local patch_name
     patch_name=$(basename "${patch_path}")
-    if [[ "${patch_name}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)- ]]; then
-      local patch_kver="${BASH_REMATCH[1]}"
-      local tree_kver
-      tree_kver=$(make -s -C "${KERNEL_SRC}" kernelversion 2>/dev/null \
-        | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || true)
-      if [[ -n "${tree_kver}" && "${patch_kver}" == "${tree_kver}" ]]; then
-        log WARN "patch targets ${patch_kver} which matches tree version — skipping: ${line}"
+    if [[ "${patch_name}" =~ ^v([0-9]+\.[0-9]+)\.[0-9]+-lqx ]]; then
+      local patch_series="${BASH_REMATCH[1]}"
+      local tree_series
+      tree_series=$(make -s -C "${KERNEL_SRC}" kernelversion 2>/dev/null \
+        | grep -oE '^[0-9]+\.[0-9]+' || true)
+      if [[ -n "${tree_series}" && "${patch_series}" == "${tree_series}" ]]; then
+        log WARN "zen stable-backport patch for ${patch_series} already in XanMod tree — skipping: ${line}"
         (( skipped++ )) || true
         continue
       fi
