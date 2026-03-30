@@ -1,0 +1,224 @@
+From: LiqXanMod Project <liqxanmod@example.com>
+Subject: [PATCH 2/3] liqxanmod: expose scheduler tunables via sysfs bridge
+
+Adds /sys/kernel/liqxanmod/ with the following attributes:
+
+  active_profile   rw  "throughput" | "latency" | "balanced"
+  base_slice_ns    rw  sysctl_sched_base_slice (nanoseconds)
+  autodetect       rw  "1" to enable runtime switching, "0" to pin profile
+
+Updated for XanMod 6.19+ scheduler API: uses sysctl_sched_base_slice
+(replaces the removed sysctl_sched_latency / sched_nr_latency API).
+
+--- a/kernel/sched/Makefile
++++ b/kernel/sched/Makefile
+@@ -37,3 +37,4 @@ obj-y += core.o
+ obj-y += fair.o
+ obj-y += build_policy.o
+ obj-y += build_utility.o
++obj-$(CONFIG_LIQXANMOD_HYBRID) += liqxanmod_sysfs.o
+
+--- /dev/null
++++ b/kernel/sched/liqxanmod_sysfs.c
+@@ -0,0 +1,175 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * kernel/sched/liqxanmod_sysfs.c
++ *
++ * Sysfs bridge exposing XanMod scheduler tunables under
++ * /sys/kernel/liqxanmod/ and providing the active_profile switch used
++ * by the runtime autodetect module.
++ *
++ * Uses sysctl_sched_base_slice (XanMod 6.19+ scheduler API).
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/kobject.h>
++#include <linux/sysfs.h>
++#include <linux/string.h>
++#include <linux/sched.h>
++#include "sched.h"
++
++/* Profile IDs */
++enum lqxm_profile {
++	LQXM_BALANCED   = 0,
++	LQXM_THROUGHPUT = 1,
++	LQXM_LATENCY    = 2,
++};
++
++static enum lqxm_profile current_profile = LQXM_BALANCED;
++static bool autodetect_enabled = true;
++
++/* ── Tunable sets ──────────────────────────────────────────────────────────── */
++
++struct lqxm_tunable_set {
++	unsigned int base_slice_ns;     /* sysctl_sched_base_slice */
++};
++
++/* XanMod throughput profile — wider slices, higher throughput */
++static const struct lqxm_tunable_set tunable_throughput = {
++	.base_slice_ns = 2000000,   /* 2 ms */
++};
++
++/* Zen/Liquorix latency profile — narrow slices, low wakeup latency */
++static const struct lqxm_tunable_set tunable_latency = {
++	.base_slice_ns = 300000,    /* 0.3 ms */
++};
++
++/* Balanced — midpoint, suitable for mixed desktop/compile workloads */
++static const struct lqxm_tunable_set tunable_balanced = {
++	.base_slice_ns = 700000,    /* 0.7 ms (kernel default) */
++};
++
++static void apply_tunable_set(const struct lqxm_tunable_set *t)
++{
++	sysctl_sched_base_slice = t->base_slice_ns;
++}
++
++void lqxm_apply_profile(enum lqxm_profile p)
++{
++	switch (p) {
++	case LQXM_THROUGHPUT: apply_tunable_set(&tunable_throughput); break;
++	case LQXM_LATENCY:    apply_tunable_set(&tunable_latency);    break;
++	default:              apply_tunable_set(&tunable_balanced);   break;
++	}
++	current_profile = p;
++}
++EXPORT_SYMBOL_GPL(lqxm_apply_profile);
++
++/* ── Sysfs attributes ─────────────────────────────────────────────────────── */
++
++static struct kobject *lqxm_kobj;
++
++static ssize_t active_profile_show(struct kobject *kobj,
++				   struct kobj_attribute *attr, char *buf)
++{
++	const char *name;
++
++	switch (current_profile) {
++	case LQXM_THROUGHPUT: name = "throughput"; break;
++	case LQXM_LATENCY:    name = "latency";    break;
++	default:              name = "balanced";   break;
++	}
++	return sysfs_emit(buf, "%s\n", name);
++}
++
++static ssize_t active_profile_store(struct kobject *kobj,
++				    struct kobj_attribute *attr,
++				    const char *buf, size_t count)
++{
++	char tmp[16];
++	size_t len = min(count, sizeof(tmp) - 1);
++
++	memcpy(tmp, buf, len);
++	tmp[len] = '\0';
++	if (len > 0 && tmp[len - 1] == '\n')
++		tmp[--len] = '\0';
++
++	if (!strcmp(tmp, "throughput"))
++		lqxm_apply_profile(LQXM_THROUGHPUT);
++	else if (!strcmp(tmp, "latency"))
++		lqxm_apply_profile(LQXM_LATENCY);
++	else if (!strcmp(tmp, "balanced"))
++		lqxm_apply_profile(LQXM_BALANCED);
++	else
++		return -EINVAL;
++
++	return count;
++}
++
++static ssize_t base_slice_ns_show(struct kobject *kobj,
++				  struct kobj_attribute *attr, char *buf)
++{
++	return sysfs_emit(buf, "%u\n", sysctl_sched_base_slice);
++}
++
++static ssize_t base_slice_ns_store(struct kobject *kobj,
++				   struct kobj_attribute *attr,
++				   const char *buf, size_t count)
++{
++	unsigned int val;
++
++	if (kstrtouint(buf, 10, &val))
++		return -EINVAL;
++	if (val < 100000 || val > 100000000)
++		return -ERANGE;
++	sysctl_sched_base_slice = val;
++	return count;
++}
++
++static ssize_t autodetect_show(struct kobject *kobj,
++			       struct kobj_attribute *attr, char *buf)
++{
++	return sysfs_emit(buf, "%d\n", autodetect_enabled ? 1 : 0);
++}
++
++static ssize_t autodetect_store(struct kobject *kobj,
++				struct kobj_attribute *attr,
++				const char *buf, size_t count)
++{
++	int val;
++
++	if (kstrtoint(buf, 10, &val))
++		return -EINVAL;
++	autodetect_enabled = (val != 0);
++	return count;
++}
++
++bool lqxm_autodetect_enabled(void)
++{
++	return autodetect_enabled;
++}
++EXPORT_SYMBOL_GPL(lqxm_autodetect_enabled);
++
++static struct kobj_attribute attr_active_profile =
++	__ATTR(active_profile, 0644, active_profile_show, active_profile_store);
++static struct kobj_attribute attr_base_slice_ns =
++	__ATTR(base_slice_ns, 0644, base_slice_ns_show, base_slice_ns_store);
++static struct kobj_attribute attr_autodetect =
++	__ATTR(autodetect, 0644, autodetect_show, autodetect_store);
++
++static struct attribute *lqxm_attrs[] = {
++	&attr_active_profile.attr,
++	&attr_base_slice_ns.attr,
++	&attr_autodetect.attr,
++	NULL,
++};
++
++static const struct attribute_group lqxm_attr_group = {
++	.attrs = lqxm_attrs,
++};
++
++/* ── Module init / exit ───────────────────────────────────────────────────── */
++
++static int __init lqxm_sysfs_init(void)
++{
++	int ret;
++
++	lqxm_kobj = kobject_create_and_add("liqxanmod", kernel_kobj);
++	if (!lqxm_kobj)
++		return -ENOMEM;
++
++	ret = sysfs_create_group(lqxm_kobj, &lqxm_attr_group);
++	if (ret) {
++		kobject_put(lqxm_kobj);
++		return ret;
++	}
++
++	lqxm_apply_profile(LQXM_BALANCED);
++	pr_info("liqxanmod: sysfs bridge active at /sys/kernel/liqxanmod/\n");
++	return 0;
++}
++
++static void __exit lqxm_sysfs_exit(void)
++{
++	sysfs_remove_group(lqxm_kobj, &lqxm_attr_group);
++	kobject_put(lqxm_kobj);
++}
++
++late_initcall(lqxm_sysfs_init);
++module_exit(lqxm_sysfs_exit);
++
++MODULE_LICENSE("GPL v2");
++MODULE_DESCRIPTION("LiqXanMod hybrid scheduler sysfs bridge");

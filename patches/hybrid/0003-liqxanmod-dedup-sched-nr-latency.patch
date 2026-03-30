@@ -1,0 +1,8 @@
+From: LiqXanMod Project <liqxanmod@example.com>
+Subject: [PATCH 3/3] liqxanmod: no-op for XanMod 6.19+ (sched_nr_latency removed)
+
+XanMod 6.19 removed sched_nr_latency and the old sysctl_sched_latency
+API in favour of sysctl_sched_base_slice. The deduplication this patch
+previously performed is no longer needed.
+
+Retained as a placeholder to keep the series numbering stable.

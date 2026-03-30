@@ -1,0 +1,16 @@
+kernel/src/
+.cache/
+*.deb
+*.rpm
+*.pkg.tar.zst
+*.tar.gz
+*.tar.xz
+*.o
+*.ko
+*.mod
+*.mod.c
+*.symvers
+*.order
+Module.symvers
+modules.builtin
+modules.builtin.modinfo

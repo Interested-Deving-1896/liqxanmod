@@ -1,0 +1,42 @@
+# LiqXanMod hybrid glue patch series
+#
+# These patches are applied AFTER the Zen/Liquorix patches and BEFORE the
+# XanMod-specific scheduler patches. Their purpose is to:
+#
+#   1. Expose Zen scheduler tunables (zen_latency_ns, zen_burst_penalty) via
+#      sysfs so the runtime autodetect module can adjust them without a reboot.
+#
+#   2. Add a Kconfig symbol (CONFIG_LIQXANMOD_HYBRID) that gates the
+#      autodetect module and the dual-scheduler sysfs bridge.
+#
+#   3. Rename any symbol that both XanMod and Zen define identically to avoid
+#      duplicate-symbol link errors (e.g. sched_nr_latency).
+#
+# Patches are listed one per line, relative to this directory.
+# Lines starting with # are comments. Blank lines are ignored.
+#
+# ── Conflict map ─────────────────────────────────────────────────────────────
+# The table below documents every known symbol conflict between XanMod 6.x
+# and Zen 6.x patches and how each is resolved.
+#
+# Symbol / file                  XanMod change      Zen change        Resolution
+# ─────────────────────────────────────────────────────────────────────────────
+# kernel/sched/fair.c            wakeup_gran tweak  latency_ns tweak  Zen wins;
+#                                                                      XanMod
+#                                                                      value
+#                                                                      exposed
+#                                                                      via sysfs
+# kernel/sched/core.c            nr_latency bump    nr_latency bump   Zen wins
+# include/linux/sched/sysctl.h   sched_nr_latency   sched_nr_latency  deduplicated
+#                                                                      by glue
+# mm/page_alloc.c                watermark tweak    watermark tweak   Zen wins
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# To add a new glue patch:
+#   1. Create the .patch file in this directory.
+#   2. Add its filename on a new line below.
+#   3. Document the conflict it resolves in the table above.
+
+0001-liqxanmod-kconfig-symbol.patch
+0002-liqxanmod-sysfs-bridge.patch
+0003-liqxanmod-dedup-sched-nr-latency.patch

@@ -1,0 +1,2 @@
+# XanMod filesystem patch series
+# Applied when ENABLE_FS_PATCHES=1 and MODE != liquorix.

@@ -1,0 +1,159 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Patch blend mode"
+        required: false
+        default: hybrid
+        type: choice
+        options: [hybrid, xanmod, liquorix, auto]
+      branch:
+        description: "XanMod branch"
+        required: false
+        default: MAIN
+        type: choice
+        options: [MAIN, EDGE, LTS, RT]
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint
+        run: |
+          find . -name '*.sh' ! -path './.cache/*' ! -path './kernel/src/*' \
+            -exec shellcheck -x -S warning {} +
+
+  build-matrix:
+    name: Build (${{ matrix.distro }} / ${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    needs: shellcheck
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Hybrid mode — the primary deliverable
+          - distro: debian
+            release: bookworm
+            mode: hybrid
+            branch: MAIN
+          - distro: arch
+            release: ""
+            mode: hybrid
+            branch: MAIN
+          - distro: fedora
+            release: "42"
+            mode: hybrid
+            branch: MAIN
+          # XanMod-only (server profile)
+          - distro: debian
+            release: bookworm
+            mode: xanmod
+            branch: LTS
+          # Liquorix-only (RT profile)
+          - distro: debian
+            release: bookworm
+            mode: liquorix
+            branch: RT
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential bc bison flex libssl-dev libelf-dev \
+            libncurses-dev dwarves pahole curl git jq \
+            shellcheck
+
+      - name: Fetch XanMod source
+        run: bash kernel/fetch.sh ${{ matrix.branch }}
+        env:
+          XANMOD_NO_API: "0"
+
+      - name: Resolve Liquorix version
+        id: lqx_ver
+        run: |
+          kmaj=$(make -s -C kernel/src kernelversion 2>/dev/null \
+            | grep -oE '^[0-9]+\.[0-9]+' || true)
+          ver=$(bash scripts/resolve-lqx-version.sh "${kmaj}")
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch Liquorix patches
+        if: matrix.mode != 'xanmod'
+        run: bash scripts/fetch-lqx-patches.sh "${{ steps.lqx_ver.outputs.version }}"
+
+      - name: Apply patches
+        run: |
+          bash scripts/apply-patches.sh kernel/src patches
+        env:
+          MODE: ${{ matrix.mode }}
+          ENABLE_ZEN_PATCHES: ${{ matrix.mode != 'xanmod' && '1' || '0' }}
+          ENABLE_LQX_PATCHES: ${{ matrix.mode != 'xanmod' && '1' || '0' }}
+          ENABLE_NET_PATCHES: "1"
+          LQX_VER: ${{ steps.lqx_ver.outputs.version }}
+
+      - name: Inject autodetect module
+        if: matrix.mode == 'hybrid' || matrix.mode == 'auto'
+        run: bash scripts/inject-autodetect.sh kernel/src
+
+      - name: Merge config fragments
+        run: |
+          REPO_ROOT="${PWD}"
+          MERGE="${REPO_ROOT}/kernel/src/scripts/kconfig/merge_config.sh"
+          FRAGS=("${REPO_ROOT}/configs/base/x86-64-v2.config")
+          case "${{ matrix.mode }}" in
+            xanmod)   FRAGS+=("${REPO_ROOT}/configs/features/xanmod.config") ;;
+            liquorix) FRAGS+=("${REPO_ROOT}/configs/features/liquorix.config") ;;
+            hybrid|auto)
+              FRAGS+=("${REPO_ROOT}/configs/features/xanmod.config")
+              FRAGS+=("${REPO_ROOT}/configs/features/liquorix.config")
+              FRAGS+=("${REPO_ROOT}/configs/features/hybrid.config")
+              ;;
+          esac
+          FRAGS+=("${REPO_ROOT}/configs/features/no-debug.config")
+          cd kernel/src
+          bash "${MERGE}" -m .config "${FRAGS[@]}"
+          make ARCH=x86 olddefconfig
+
+      - name: Build kernel (allmodconfig smoke test)
+        run: |
+          cd kernel/src
+          make -j"$(nproc)" ARCH=x86 bzImage
+        timeout-minutes: 90
+
+      - name: Upload bzImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bzImage-${{ matrix.mode }}-${{ matrix.branch }}-${{ matrix.distro }}
+          path: kernel/src/arch/x86/boot/bzImage
+          if-no-files-found: error
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_number }}"
+          name: "LiqXanMod build ${{ github.run_number }}"
+          files: artifacts/**/*
+          generate_release_notes: true

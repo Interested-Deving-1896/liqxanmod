@@ -1,0 +1,3 @@
+# MediaTek MT7921 Bluetooth patch series
+# Applied when ENABLE_MEDIATEK_BT=1.
+# Likely upstream in 5.18+; verify before applying on 6.x.

@@ -1,0 +1,8 @@
+# Core patch series — applied unconditionally in all modes.
+#
+# Place patches here that must land before any XanMod or Zen patches.
+# Typical contents: version-string patches, build-system fixes, and
+# any upstream fixes not yet in the XanMod tree.
+#
+# Format: one patch filename per line, relative to this directory.
+# Lines starting with # are comments. Blank lines are ignored.
