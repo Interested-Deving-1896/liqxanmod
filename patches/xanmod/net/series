@@ -1,0 +1,2 @@
+# XanMod network patch series
+# Applied when ENABLE_NET_PATCHES=1 and MODE != liquorix.

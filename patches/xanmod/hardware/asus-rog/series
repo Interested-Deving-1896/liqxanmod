@@ -1,0 +1,3 @@
+# ASUS ROG hardware patch series
+# Applied when ENABLE_ROG=1.
+# Source: arglebargle-arch/xanmod-rog-PKGBUILD — requires 6.x rebase.

@@ -1,0 +1,3 @@
+# XanMod scheduler patch series (CachyOS scheduler)
+# Applied when ENABLE_CACHY=1 and MODE != liquorix.
+# Populate by copying patches from the XanMod source tree.
