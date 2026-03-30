@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # vars are sourced and used by build.sh
 # profiles/rog.sh — ASUS ROG laptop/desktop
 # Hybrid mode with ROG and MediaTek BT patches.
 

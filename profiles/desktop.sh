@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # vars are sourced and used by build.sh
 # profiles/desktop.sh — general desktop workload
 # Hybrid mode with balanced defaults. Good for daily driving.
 

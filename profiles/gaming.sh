@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # vars are sourced and used by build.sh
 # profiles/gaming.sh — gaming / low-latency desktop
 # Hybrid mode biased toward latency. Autodetect switches to throughput
 # during shader compilation and back to latency during gameplay.

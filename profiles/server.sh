@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # vars are sourced and used by build.sh
 # profiles/server.sh — headless server / throughput workload
 # XanMod-only mode. Zen patches excluded; no autodetect overhead.
 

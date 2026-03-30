@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # vars are sourced and used by build.sh
 # profiles/rt.sh — hard real-time (audio production, industrial)
 # Liquorix-only mode on the RT branch. Autodetect disabled; latency
 # profile is pinned at boot.

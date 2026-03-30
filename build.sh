@@ -215,8 +215,11 @@ fi
 # CPU vendor fragment
 if [[ -n "${VENDOR}" ]]; then
   VENDOR_CFG="${CONFIGS_DIR}/arch/${VENDOR}.config"
-  [[ -f "${VENDOR_CFG}" ]] && FRAGMENTS+=("${VENDOR_CFG}") \
-    || log WARN "No vendor config for '${VENDOR}', skipping."
+  if [[ -f "${VENDOR_CFG}" ]]; then
+    FRAGMENTS+=("${VENDOR_CFG}")
+  else
+    log WARN "No vendor config for '${VENDOR}', skipping."
+  fi
 fi
 
 # Mode-specific config layer
