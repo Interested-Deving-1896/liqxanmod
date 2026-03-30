@@ -7,31 +7,29 @@ option compiles both the XanMod performance path and the Zen latency
 path into the kernel; the active path is chosen at runtime by the
 autodetect module based on observed workload characteristics.
 
-Depends on SCHED_DEBUG so the sysfs tunables are accessible.
+Placed in init/Kconfig after the "Scheduler features" menu (XanMod 6.19+
+moved scheduler Kconfig symbols out of kernel/sched/Kconfig).
 
---- a/kernel/sched/Kconfig
-+++ b/kernel/sched/Kconfig
-@@ -1,6 +1,22 @@
- # SPDX-License-Identifier: GPL-2.0-only
- menu "CPU Scheduler"
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -918,6 +918,22 @@ config SCHED_PROXY_EXEC
+ 	  tasks to inherit the scheduling context of higher priority waiters.
  
+ endmenu
++
 +config LIQXANMOD_HYBRID
 +	bool "LiqXanMod hybrid scheduler autodetect"
-+	depends on SCHED_DEBUG
 +	default n
 +	help
 +	  Compile both the XanMod throughput-optimised scheduler path and the
 +	  Zen/Liquorix low-latency scheduler path into a single kernel image.
 +
-+	  A lightweight in-kernel workload detector (drivers/liqxanmod/) samples
-+	  CPU runqueue depth, wakeup frequency, and IRQ rate every 100 ms and
-+	  switches the active scheduler profile via sysfs without requiring a
++	  A lightweight in-kernel workload detector (kernel/sched/liqxanmod_sysfs.c)
++	  samples CPU runqueue depth, wakeup frequency, and IRQ rate every 100 ms
++	  and switches the active scheduler profile via sysfs without requiring a
 +	  reboot or kernel parameter change.
 +
 +	  Profiles: throughput (XanMod), latency (Zen), balanced (default).
 +
 +	  If unsure, say N and select a single-mode build instead.
 +
- config SCHED_OMIT_FRAME_POINTER
- 	bool "Omit frame pointer in scheduler hot paths"
- 	depends on !FRAME_POINTER
