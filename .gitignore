@@ -14,3 +14,4 @@ kernel/src/
 Module.symvers
 modules.builtin
 modules.builtin.modinfo
+.npmrc

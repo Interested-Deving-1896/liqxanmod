@@ -1,0 +1,13 @@
+{
+  "name": "dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12"
+    }
+  },
+  "postCreateCommand": "pip install git-filter-repo",
+  "remoteEnv": {
+    "GITLAB_TOKEN": "${localEnv:GITLAB_TOKEN}"
+  }
+}

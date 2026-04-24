@@ -2,6 +2,7 @@
 # Mirrors: build.yml, gen-arch-config.yml
 
 stages:
+  - secret-scan
   - generate
   - build
   - release
@@ -55,3 +56,16 @@ gitlab-release:
     description: 'liqxanmod $CI_COMMIT_TAG'
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v/'
+
+secret-scan:
+  stage: secret-scan
+  image: python:3.12-slim
+  before_script:
+    - pip install git-filter-repo --quiet
+  script:
+    - |
+      echo "Scanning commit history for leaked GitLab PATs..."
+      git log --all -p | grep -E "glpat-[A-Za-z0-9_-]{20,}" && echo "LEAKED TOKEN DETECTED" && exit 1 || echo "No leaked tokens found."
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|master)$/'
