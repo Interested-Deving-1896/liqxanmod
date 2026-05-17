@@ -17,7 +17,7 @@ jobs:
     name: Generate ${{ inputs.arch }} config
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install cross-compilation toolchain
         run: |
@@ -48,7 +48,7 @@ jobs:
           esac
 
       - name: Upload generated config
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: config-${{ inputs.arch }}-${{ inputs.kernel_version }}
           path: configs/base/${{ inputs.arch == 'arm64' && 'aarch64' || 'riscv64' }}.config
