@@ -1,0 +1,73 @@
+name: Create Missing READMEs
+
+on:
+  schedule:
+    - cron: '5 3 * * *'   # Daily at 03:05 UTC — full sweep
+  # Run OSP-priority pass after any workflow that creates new repos
+  # so freshly imported repos get a README immediately.
+  workflow_run:
+    workflows:
+      - "Add Mirror Repo"
+      - "Import Repository"
+      - "Clone Org"
+      - "Merge Repos into Monorepo"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      repo_filter:
+        description: "Repo name substring filter (blank = all)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — detect missing READMEs without creating them"
+        type: boolean
+        required: false
+        default: false
+      rate_limit_rerun:
+        description: "Set by rate-limit-rerun workflow — prevents re-trigger loops"
+        required: false
+        default: "false"
+        type: string
+
+concurrency:
+  group: create-readmes
+  cancel-in-progress: false  # Never cancel mid-creation
+
+permissions:
+  contents: write
+  pull-requests: read  # Added permission to read pull requests
+  issues: read  # Added permission to read issues
+  metadata: read  # Added permission to read repository metadata
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve new repo name (Add Mirror Repo trigger)
+        id: resolve
+        if: github.event_name == 'workflow_run' && github.event.workflow.name == 'Add Mirror Repo'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          run_id="${{ github.event.workflow_run.id }}"
+          new_repo=$(gh api "repos/${{ github.repository }}/actions/runs/${run_id}" \
+            | jq -r '.inputs.repo_url // empty' | sed 's|.*/||')
+          echo "new_repo=${new_repo}" >> "$GITHUB_OUTPUT"
+
+      - name: Create missing READMEs
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITHUB_OWNER: Interested-Deving-1896
+          REPO_FILTER: ${{ steps.resolve.outputs.new_repo || inputs.repo_filter || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          PRIORITY_ONLY: "true"
+        run: bash scripts/create-readmes.sh
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
