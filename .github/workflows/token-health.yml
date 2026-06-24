@@ -1,0 +1,113 @@
+name: Token Health Monitor
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      warn_days:
+        description: 'Days before expiry to start warning'
+        required: false
+        type: string
+        default: '30'
+      stale_days:
+        description: 'Days since last rotation before flagging as stale'
+        required: false
+        type: string
+        default: '90'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check token health
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_SYNC_TOKEN }}
+          REPO: ${{ github.repository }}
+          WARN_DAYS: ${{ inputs.warn_days || '30' }}
+          STALE_DAYS: ${{ inputs.stale_days || '90' }}
+        run: |
+          bash scripts/token-monitor.sh && echo "needs_attention=false" >> "$GITHUB_OUTPUT" \
+            || echo "needs_attention=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update alert issue
+        if: steps.check.outputs.needs_attention == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          existing=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "token-monitor" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          body=$(cat << 'BODY'
+          ## Token Monitor Alert
+
+          One or more secrets used by fork-sync-all need attention.
+
+          **Quick links:**
+          - [View/manage PATs](https://github.com/settings/tokens)
+          - [Rotate Secret Token workflow](https://github.com/${{ github.repository }}/actions/workflows/rotate-token.yml)
+          - [GitLab PATs](https://gitlab.com/-/user_settings/personal_access_tokens)
+
+          _This issue is managed automatically by the Token Monitor workflow. It will be closed when all tokens are healthy._
+          BODY
+          )
+          body="${body}
+
+          See the [workflow run summary](${RUN_URL}) for details and rotation links."
+
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" \
+              --repo "${{ github.repository }}" \
+              --body "**Updated $(date -u +%Y-%m-%d):** Token health check re-run. See [run summary](${RUN_URL}) for current status."
+            echo "Updated existing issue #${existing}"
+          else
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "Token Monitor: action required" \
+              --body "$body" \
+              --label "token-monitor"
+            echo "Created new alert issue"
+          fi
+
+      - name: Close alert issue if all healthy
+        if: steps.check.outputs.needs_attention == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          existing=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "token-monitor" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [[ -n "$existing" ]]; then
+            gh issue close "$existing" \
+              --repo "${{ github.repository }}" \
+              --comment "All tokens are healthy as of $(date -u +%Y-%m-%d). Closing."
+            echo "Closed issue #${existing}"
+          else
+            echo "No open alert issue — nothing to close."
+          fi
+
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
