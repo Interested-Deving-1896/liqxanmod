@@ -1,0 +1,70 @@
+name: Upstream Direct Commits from OSP + OOC
+
+# Detects commits pushed directly to OSP/OOC default branches (without a PR)
+# that are not present in Interested-Deving-1896 and opens PRs upstream so
+# they can be reviewed and merged back into the source of truth.
+#
+# Complements upstream-prs.yml (which handles open PRs) by catching direct
+# pushes that bypass the PR workflow entirely.
+#
+# Schedule: runs at :47 each hour — after mirror-to-osp (:00), reconcile (:30),
+# and upstream-prs (:30), so reconcile noise has settled before we scan.
+
+on:
+  schedule:
+    - cron: "47 * * * *"
+  workflow_dispatch:
+    inputs:
+      repo_filter:
+        description: "Repo name substring filter (blank = all)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — detect commits without opening PRs"
+        type: boolean
+        required: false
+        default: false
+      mirror_orgs:
+        description: "Space-separated mirror orgs to scan (blank = both OSP and OOC)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+# ── Rate limits ──────────────────────────────────────────────────────────────
+# GitHub REST API (SYNC_TOKEN): 5 000 req/hr primary limit.
+#   upstream-commits.sh retries HTTP 403/429 up to 3 times with reset-aware
+#   sleep. Runs hourly at :47 — offset from mirror-to-osp (:00) and
+#   reconcile-org-refs (:30) to spread API usage across the hour.
+
+jobs:
+  upstream-commits:
+    name: Upstream direct commits → Interested-Deving-1896
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Upstream direct commits from OSP and OOC
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          UPSTREAM_OWNER: Interested-Deving-1896
+          MIRROR_ORGS: >-
+            ${{
+              inputs.mirror_orgs != '' && inputs.mirror_orgs ||
+              'OpenOS-Project-OSP OpenOS-Project-Ecosystem-OOC'
+            }}
+          REPO_FILTER: ${{ inputs.repo_filter || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: bash scripts/upstream-commits.sh
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
