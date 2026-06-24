@@ -1,0 +1,62 @@
+name: Sync All Forks
+
+on:
+  schedule:
+    # Daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      repo_filter:
+        description: "Sync only this repo (leave blank for all)"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Report without syncing"
+        required: false
+        default: false
+        type: boolean
+      force:
+        description: "Force-push even if diverged"
+        required: false
+        default: false
+        type: boolean
+      branch_filter:
+        description: "Sync only this branch (leave blank for all)"
+        required: false
+        default: ""
+        type: string
+      rate_limit_rerun:
+        description: "Set by rate-limit-rerun workflow — prevents re-trigger loops"
+        required: false
+        default: "false"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # 355 min = just under GitHub's 6h hard limit. The script self-limits at
+    # 335 min so it always exits cleanly before this timeout fires.
+    timeout-minutes: 355
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Sync all forks
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          REPO_FILTER: ${{ inputs.repo_filter || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE: ${{ inputs.force || 'false' }}
+          BRANCH_FILTER: ${{ inputs.branch_filter || '' }}
+        run: bash scripts/sync-all-forks.sh
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
