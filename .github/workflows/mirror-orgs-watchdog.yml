@@ -1,0 +1,78 @@
+name: Mirror Watchdog
+
+# Triggers when any of the three mirror workflows fail.
+# Waits 5 minutes (to allow transient GitHub API issues to clear) then
+# retries once. If the retry also fails, the failure surfaces normally
+# in the Actions tab and inbox.
+#
+# Covered workflows:
+#   Mirror Interested-Deving-1896 → OSP  (mirror-to-osp.yml)        — hourly at :00
+#   Mirror Orgs                          (mirror-orgs-full.yml)      — daily at 02:00
+#   Mirror OSP → GitLab                  (mirror-osp-to-gitlab.yml)  — hourly at :30
+#   Mirror Releases                      (mirror-releases.yml)       — hourly at :00
+#   Mirror Artifacts                     (mirror-artifacts.yml)      — hourly at :00
+
+on:
+  workflow_run:
+    workflows:
+      - "Mirror Interested-Deving-1896 → OSP"
+      - "Mirror Orgs"
+      - "Mirror OSP → GitLab"
+      - "Mirror Releases"
+      - "Mirror Artifacts"
+    types: [completed]
+
+concurrency:
+  # One watchdog retry per workflow at a time — prevents retry storms when
+  # a mirror fails repeatedly. Uses the triggering workflow name as the key.
+  group: mirror-watchdog-${{ github.event.workflow_run.name }}
+  cancel-in-progress: true  # If a newer retry is queued, cancel the older one
+
+permissions:
+  actions: write   # needed to re-trigger workflows
+  contents: read
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Log failure context
+        run: |
+          echo "Mirror workflow failed:"
+          echo "  Workflow: ${{ github.event.workflow_run.name }}"
+          echo "  Run ID  : ${{ github.event.workflow_run.id }}"
+          echo "  Branch  : ${{ github.event.workflow_run.head_branch }}"
+          echo "  Started : ${{ github.event.workflow_run.created_at }}"
+
+      - name: Wait before retry
+        run: sleep 300   # 5 minutes
+
+      - name: Retry mirror
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          case "$WORKFLOW_NAME" in
+            "Mirror Interested-Deving-1896 → OSP") TARGET=mirror-to-osp.yml ;;
+            "Mirror Orgs")                         TARGET=mirror-orgs-full.yml ;;
+            "Mirror OSP → GitLab")                 TARGET=mirror-osp-to-gitlab.yml ;;
+            "Mirror Releases")                     TARGET=mirror-releases.yml ;;
+            "Mirror Artifacts")                    TARGET=mirror-artifacts.yml ;;
+            *) echo "Unknown workflow '${WORKFLOW_NAME}' — nothing to retry"; exit 0 ;;
+          esac
+          echo "Retrying ${TARGET}..."
+          gh workflow run "$TARGET" \
+            --repo ${{ github.repository }} \
+            --ref main
+          echo "Retry triggered."
+
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
