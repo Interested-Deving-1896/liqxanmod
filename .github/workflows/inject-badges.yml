@@ -1,0 +1,102 @@
+name: Inject Built-with-Ona Badges
+
+# Injects the "Built with Ona" badge into README.md files across all repos
+# in Interested-Deving-1896, OpenOS-Project-OSP, OpenOS-Project-Ecosystem-OOC,
+# and the GitLab openos-project group (including all subgroups).
+#
+# Idempotent — repos that already have the badge are skipped.
+# Badge links to https://app.ona.com/#<repo-url> with the canonical repo URL
+# for each platform (GitHub URL for GitHub repos, GitLab URL for GitLab repos).
+#
+# Runs:
+#   - Daily at 03:15 UTC — full sweep across all orgs + GitLab
+#   - After mirror/import workflows — OSP-only fast pass (new repos get badge immediately)
+#   - Manually via workflow_dispatch
+#
+# Priority tiers:
+#   workflow_run → OSP org only, skip GitLab (fast, low API usage)
+#   schedule     → all orgs + GitLab (full sweep)
+
+on:
+  schedule:
+    - cron: '15 3 * * *'   # Daily at 03:15 UTC (full sweep)
+  workflow_run:
+    workflows:
+      - "Mirror Interested-Deving-1896 → OSP"
+      - "Mirror OSP → GitLab"
+      - "Add Mirror Repo"
+      - "Import Repository"
+      - "Clone Org"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      repo_filter:
+        description: "Repo name substring filter (blank = all)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — print actions without committing"
+        type: boolean
+        required: false
+        default: false
+      orgs:
+        description: "GitHub orgs to process (space-separated, blank = all three)"
+        required: false
+        default: ""
+      skip_gitlab:
+        description: "Skip the GitLab pass"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+# ── Rate limits ──────────────────────────────────────────────────────────────
+# GitHub REST API: ~3 calls per repo (list + get README + PUT).
+# GitLab REST API: ~2 calls per project (get file + PUT).
+# Both APIs are called sequentially with no parallelism.
+
+jobs:
+  inject:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Determine scope
+        id: scope
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # Priority pass — OSP only, skip GitLab
+            echo "orgs=OpenOS-Project-OSP" >> "$GITHUB_OUTPUT"
+            echo "skip_gitlab=true" >> "$GITHUB_OUTPUT"
+          else
+            # Schedule or manual — full sweep
+            echo "orgs=${{ inputs.orgs || 'Interested-Deving-1896 OpenOS-Project-OSP OpenOS-Project-Ecosystem-OOC' }}" >> "$GITHUB_OUTPUT"
+            echo "skip_gitlab=${{ inputs.skip_gitlab || 'false' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Inject badges
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_SYNC_TOKEN }}
+          REPO_FILTER: ${{ inputs.repo_filter || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          ORGS: ${{ steps.scope.outputs.orgs }}
+          SKIP_GITLAB: ${{ steps.scope.outputs.skip_gitlab }}
+          GITLAB_GROUP: openos-project
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "SYNC_TOKEN not configured — skipping."
+            exit 0
+          fi
+          bash scripts/inject-badges.sh
+
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
