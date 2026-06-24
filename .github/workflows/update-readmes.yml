@@ -1,0 +1,147 @@
+name: Update READMEs
+
+# Updates AI-owned sections (<!-- AI:start:* --> blocks) in existing READMEs
+# and refreshes repo descriptions + topics across Interested-Deving-1896.
+#
+# Priority tiers:
+#   1. Repos mirrored into OSP (fetched live from Interested-Deving-1896 org)
+#   2. All remaining repos in Interested-Deving-1896 (full sweep only)
+#
+# Triggers:
+#   - Add Mirror Repo completes → priority-only run for the new repo
+#   - Other content workflows complete → priority-only run
+#   - Daily 03:00 UTC → full sweep (priority first, then secondary)
+#   - Push to a repo → process that repo only
+#   - Manual dispatch → configurable
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore:
+      - '.github/workflows/**'
+      - 'scripts/**'
+      - 'registered-imports.json'
+      - 'README.md'
+      - '.gitignore'
+      - '.devcontainer/**'
+  schedule:
+    - cron: '0 3 * * *'   # Full sweep daily at 03:00 UTC (off-peak)
+  workflow_run:
+    workflows:
+      - "Add Mirror Repo"
+      - "Import Repository"
+      - "Clone Org"
+      - "Merge Repos into Monorepo"
+      - "Sync All Forks"
+      - "Sync Registered Imports"
+      - "Sync from GitLab"
+      - "Sync Interested-Deving-1896 Forks"
+      - "Sync Upstream Sources"
+      - "Sync penguins-eggs docs to penguins-eggs-book"
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Space-separated repo names to process (leave blank for all)'
+        required: false
+        type: string
+        default: ''
+      priority_only:
+        description: 'Process OSP-mirrored repos only (faster, lower API usage)'
+        type: boolean
+        required: false
+        default: false
+      dry_run:
+        description: 'Dry run — detect stale sections without writing changes'
+        type: boolean
+        required: false
+        default: false
+      force_rewrite:
+        description: 'Strip <!-- AI:skip --> and migrate all static READMEs to the marker template'
+        type: boolean
+        required: false
+        default: false
+      rate_limit_rerun:
+        description: "Set by rate-limit-rerun workflow — prevents re-trigger loops"
+        required: false
+        default: "false"
+        type: string
+
+concurrency:
+  group: update-readmes
+  cancel-in-progress: true   # Newer push supersedes older one
+
+permissions:
+  contents: write
+
+# ── Rate limits ──────────────────────────────────────────────────────────────
+# GitHub REST API (SYNC_TOKEN): 5 000 req/hr — reads/writes repo files.
+#   Retries HTTP 403/429 with X-RateLimit-Reset sleep (up to 3 attempts).
+# GitHub Models API (SYNC_TOKEN): quota varies; gpt-4o-mini is used.
+#   HTTP 429 includes Retry-After. The script retries up to 3 times and
+#   skips AI generation (exits 0) if the quota is fully exhausted.
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Only run on pushes from Interested-Deving-1896 itself, not mirror bots.
+    # workflow_run and schedule always run (they originate from this repo).
+    if: github.event_name != 'push' || github.repository_owner == 'Interested-Deving-1896'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine repos to process
+        id: repos
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "changed_repos=${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
+            echo "priority_only=false" >> "$GITHUB_OUTPUT"
+            echo "new_repo=" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            triggering="${{ github.event.workflow.name }}"
+            if [[ "$triggering" == "Add Mirror Repo" ]]; then
+              # Extract the repo name from the triggering run's inputs via API.
+              run_id="${{ github.event.workflow_run.id }}"
+              new_repo=$(gh api "repos/${{ github.repository }}/actions/runs/${run_id}" \
+                | jq -r '.inputs.repo_url // empty' \
+                | sed 's|.*/||')
+              echo "new_repo=${new_repo}" >> "$GITHUB_OUTPUT"
+              echo "changed_repos=" >> "$GITHUB_OUTPUT"
+              echo "priority_only=true" >> "$GITHUB_OUTPUT"
+            else
+              # Other workflow_run triggers: priority-only sweep.
+              echo "new_repo=" >> "$GITHUB_OUTPUT"
+              echo "changed_repos=" >> "$GITHUB_OUTPUT"
+              echo "priority_only=true" >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ -n "${{ inputs.repos }}" ]]; then
+            echo "changed_repos=${{ inputs.repos }}" >> "$GITHUB_OUTPUT"
+            echo "priority_only=false" >> "$GITHUB_OUTPUT"
+            echo "new_repo=" >> "$GITHUB_OUTPUT"
+          else
+            # Manual dispatch or schedule: respect priority_only input;
+            # schedule always does a full sweep.
+            echo "changed_repos=" >> "$GITHUB_OUTPUT"
+            echo "priority_only=${{ inputs.priority_only || 'false' }}" >> "$GITHUB_OUTPUT"
+            echo "new_repo=" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+
+      - name: Update READMEs
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITHUB_OWNER: Interested-Deving-1896
+          CHANGED_REPOS: ${{ steps.repos.outputs.changed_repos }}
+          NEW_REPO: ${{ steps.repos.outputs.new_repo }}
+          PRIORITY_ONLY: ${{ steps.repos.outputs.priority_only }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE_REWRITE: ${{ inputs.force_rewrite || 'false' }}
+        run: bash scripts/update-readmes.sh
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
