@@ -1,0 +1,51 @@
+name: Sync Interested-Deving-1896 Forks
+
+on:
+  schedule:
+    # Every hour at :05 past the hour (offset from the daily sync at 06:00)
+    - cron: "5 * * * *"
+  workflow_dispatch:
+    inputs:
+      repo_filter:
+        description: "Repo name substring filter (blank = all)"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Report without syncing"
+        required: false
+        default: false
+        type: boolean
+      upstream_user:
+        description: "Upstream GitHub user to sync from"
+        required: false
+        default: "Interested-Deving-1896"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # 60 min hard limit; script self-limits at 50 min for a clean exit.
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Sync Interested-Deving-1896 forks
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          UPSTREAM_USER: ${{ inputs.upstream_user || 'Interested-Deving-1896' }}
+          REPO_FILTER: ${{ inputs.repo_filter || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: bash scripts/sync-Interested-Deving-1896-forks.sh
+      - name: Write summary
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INPUTS_JSON: ${{ toJSON(inputs) }}
+        run: bash scripts/write-summary.sh
