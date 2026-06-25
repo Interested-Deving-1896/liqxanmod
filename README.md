@@ -107,11 +107,12 @@ _Original project — no upstream fork._
 <!-- AI:start:resources -->
 | File | Description |
 |---|---|
+| [.gitlab/merge_request_templates/Default.md](https://github.com/Interested-Deving-1896/liqxanmod/blob/main/.gitlab/merge_request_templates/Default.md) | GitLab MR template |
 | [config/gitlab-subgroups.yml](https://github.com/Interested-Deving-1896/liqxanmod/blob/main/config/gitlab-subgroups.yml) | GitLab subgroup map |
 <!-- AI:end:resources -->
 
 ## License
 
 <!-- AI:start:license -->
-<!-- License not detected — add a LICENSE file to this repo. -->
+[MIT](https://github.com/Interested-Deving-1896/liqxanmod/blob/main/LICENSE) © 2026 [Interested-Deving-1896](https://github.com/Interested-Deving-1896)
 <!-- AI:end:license -->
