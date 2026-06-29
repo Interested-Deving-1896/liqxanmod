@@ -75,4 +75,4 @@ jobs:
         env:
           JOB_STATUS: ${{ job.status }}
           INPUTS_JSON: ${{ toJSON(inputs) }}
-        run: bash scripts/write-summary.sh
+        run: bash ./scripts/write-summary.sh
