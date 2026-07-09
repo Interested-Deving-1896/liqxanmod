@@ -20,7 +20,7 @@ jobs:
     if: github.repository == 'OpenOS-Project-OSP/liqxanmod'
     steps:
       - name: Checkout full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -37,7 +37,7 @@ jobs:
             > ~/.git-credentials
 
           git remote add mirror \
-            "https://github.com/Interested-Deving-1896/liqxanmod.git"
+            "https://github.com/OpenOS-Project-Ecosystem-OOC/liqxanmod.git"
 
           git push mirror --all --force
           git push mirror --tags --force
