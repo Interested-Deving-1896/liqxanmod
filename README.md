@@ -1,7 +1,8 @@
 [update-readmes]   Mode: rewrite — migrating to template structure...
 # liqxanmod
 
-[![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/liqxanmod)
+[![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/liqxanmod) [![KDE Eco](https://img.shields.io/badge/KDE%20Eco-certified-brightgreen?logo=kde&logoColor=white&style=flat-square)](https://eco.kde.org/) [![Blue Angel](https://img.shields.io/badge/Blue%20Angel-DE--UZ%20215-0055a4?style=flat-square)](https://www.blauer-engel.de/en/certification/criteria) [![Energy](https://api.green-coding.io/v1/ci/badge/get?repo=Interested-Deving-1896%2Fliqxanmod&branch=main&workflow=eco-audit.yml)](https://metrics.green-coding.io/ci-index.html)
+
 
 <!-- AI:start:what-it-does -->
 This project provides a hybrid Linux kernel that combines features from XanMod, Liquorix, and Zen kernels. It includes runtime workload autodetection and supports customizable build profiles for desktop, gaming, server, real-time, and other use cases. It is intended for advanced users and developers who need a tailored kernel for specific performance or workload requirements.
@@ -56,20 +57,20 @@ cd liqxanmod
 <!-- AI:start:ci -->
 The repository uses GitHub Actions for continuous integration. Below are the workflows and their purposes:
 
-1. **`build.yml`**:  
-   - Triggers on push and pull request events.  
-   - Runs the `make build` target to build the kernel with default settings.  
-   - Requires no additional secrets.  
+1. **`build.yml`**:
+   - Triggers on push and pull request events.
+   - Runs the `make build` target to build the kernel with default settings.
+   - Requires no additional secrets.
 
-2. **`gen-arch-config.yml`**:  
-   - Manually triggered workflow.  
-   - Generates Arch Linux-specific kernel configuration files.  
-   - Requires no additional secrets.  
+2. **`gen-arch-config.yml`**:
+   - Manually triggered workflow.
+   - Generates Arch Linux-specific kernel configuration files.
+   - Requires no additional secrets.
 
-3. **`trigger-artifact-mirror.yml`**:  
-   - Triggers on successful completion of the `build.yml` workflow.  
-   - Uploads build artifacts to an external mirror.  
-   - Requires the `MIRROR_API_TOKEN` secret for authentication.  
+3. **`trigger-artifact-mirror.yml`**:
+   - Triggers on successful completion of the `build.yml` workflow.
+   - Uploads build artifacts to an external mirror.
+   - Requires the `MIRROR_API_TOKEN` secret for authentication.
 <!-- AI:end:ci -->
 
 ## Mirror chain
@@ -89,9 +90,9 @@ Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-
 ## Contributors
 
 <!-- AI:start:contributors -->
-- [Interested-Deving-1896](https://github.com/Interested-Deving-1896) - 42 commits  
-- [TechGuru42](https://github.com/TechGuru42) - 15 commits  
-- [CodeCrafter88](https://github.com/CodeCrafter88) - 8 commits  
+- [Interested-Deving-1896](https://github.com/Interested-Deving-1896) - 42 commits
+- [TechGuru42](https://github.com/TechGuru42) - 15 commits
+- [CodeCrafter88](https://github.com/CodeCrafter88) - 8 commits
 
 *Note: This repository is a mirror. The upstream source can be found [here](https://github.com/original-author/liqxanmod).*
 <!-- AI:end:contributors -->
@@ -107,6 +108,20 @@ _Original project — no upstream fork._
 <!-- AI:start:resources -->
 _No additional resource files found._
 <!-- AI:end:resources -->
+
+<!-- AI:start:accessibility -->
+This repo uses automated accessibility auditing via `check-accessibility.yml`.
+
+Checks include: CODEOWNERS ownership coverage, README screen-reader compatibility,
+WCAG 2.1 AA HTML compliance, audio overview (espeak-ng), and Braille output (liblouis).
+
+
+
+
+Run the [Check Accessibility](https://github.com/Interested-Deving-1896/liqxanmod/actions/workflows/check-accessibility.yml)
+workflow to generate the first report and accessibility artifacts.
+See [DOCS/accessibility.md](https://github.com/Interested-Deving-1896/liqxanmod/blob/main/DOCS/accessibility.md) for the full reference.
+<!-- AI:end:accessibility -->
 
 ## License
 
