@@ -37,7 +37,7 @@ jobs:
             > ~/.git-credentials
 
           git remote add mirror \
-            "https://github.com/Interested-Deving-1896/liqxanmod.git"
+            "https://github.com/OpenOS-Project-Ecosystem-OOC/liqxanmod.git"
 
           git push mirror --all --force
           git push mirror --tags --force
