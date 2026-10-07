@@ -92,10 +92,7 @@ Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-
 
 <!-- AI:start:contributors -->
 - [Interested-Deving-1896](https://github.com/Interested-Deving-1896) - 42 commits
-- [TechGuru42](https://github.com/TechGuru42) - 15 commits
-- [CodeCrafter88](https://github.com/CodeCrafter88) - 8 commits
 
-*Note: This repository is a mirror. The upstream source can be found [here](https://github.com/original-author/liqxanmod).*
 <!-- AI:end:contributors -->
 
 ## Origins
@@ -123,7 +120,8 @@ WCAG 2.1 AA HTML compliance, audio overview (espeak-ng), and Braille output (lib
 
 Run the [Check Accessibility](https://github.com/Interested-Deving-1896/liqxanmod/actions/workflows/check-accessibility.yml)
 workflow to generate the first report and accessibility artifacts.
-See [DOCS/accessibility.md](https://github.com/Interested-Deving-1896/liqxanmod/blob/main/DOCS/accessibility.md) for the full reference.
+See the [W3C Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+for the underlying accessibility reference.
 <!-- AI:end:accessibility -->
 
 ## License
