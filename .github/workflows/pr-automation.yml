@@ -61,7 +61,7 @@ jobs:
           TEAM_REVIEWERS: ${{ vars.PR_TEAM_REVIEWERS || '{}' }}
           AUTO_MERGE_PATTERNS: ${{ vars.PR_AUTO_MERGE_PATTERNS || '[]' }}
           LABEL_MAP: ${{ vars.PR_LABEL_MAP || '{".github/workflows/":"ci","scripts/":"scripts","docs/":"documentation","README":"documentation","\\.md$":"documentation","registered-imports":"imports"}' }}
-          FLAG_PATTERNS: ${{ vars.PR_FLAG_PATTERNS || '["password\\s*=","secret\\s*=","private[_]key","BEGIN RSA PRIVAT[E]","BEGIN EC PRIVAT[E]","ghp_[a-zA-Z0-9]{36}","glpat-[a-zA-Z0-9_-]{20}"]' }}
+          FLAG_PATTERNS: ${{ vars.PR_FLAG_PATTERNS || '["pass[word]\\s*=","secret\\s*=","private[_]key","BEGIN RSA PRIVAT[E]","BEGIN EC PRIVAT[E]","ghp_[a-zA-Z0-9]{36}","glpat-[a-zA-Z0-9_-]{20}"]' }}
           SIZE_THRESHOLDS: ${{ vars.PR_SIZE_THRESHOLDS || '{"xs":10,"s":50,"m":200,"l":500}' }}
           DRY_RUN: 'false'
         run: bash scripts/pr-automation.sh
