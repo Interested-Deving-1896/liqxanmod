@@ -17,7 +17,7 @@
 set -uo pipefail
 
 JOB_STATUS="${JOB_STATUS:-unknown}"
-INPUTS_JSON="${INPUTS_JSON:-{}}"
+if [[ -z "${INPUTS_JSON:-}" ]]; then INPUTS_JSON='{}'; fi
 
 python3 - << PYEOF
 import os, json, sys
