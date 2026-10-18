@@ -1,4 +1,3 @@
-```yaml
 name: Build
 
 on:
@@ -161,4 +160,3 @@ jobs:
           name: "LiqXanMod build ${{ github.run_number }}"
           files: artifacts/**/*
           generate_release_notes: true
-```
