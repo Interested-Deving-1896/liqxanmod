@@ -34,12 +34,15 @@ set -uo pipefail
 : "${PR_NUMBER:?PR_NUMBER is required}"
 
 SYNC_TOKEN="${SYNC_TOKEN:-}"
-REVIEWERS_MAP="${REVIEWERS_MAP:-{}}"
-TEAM_REVIEWERS="${TEAM_REVIEWERS:-{}}"
-AUTO_MERGE_PATTERNS="${AUTO_MERGE_PATTERNS:-[\"^docs/\",\"^README\",\"^CHANGELOG\",\"\\\\.md$\",\"^scripts/update-\",\"^\\.github/workflows/update-\",\"^\\.github/workflows/rotate-\"]}"
-LABEL_MAP="${LABEL_MAP:-{\".github/workflows/\":\"ci\",\"scripts/\":\"scripts\",\"docs/\":\"documentation\",\"README\":\"documentation\",\"\\.md$\":\"documentation\",\"registered-imports\":\"imports\"}}"
-FLAG_PATTERNS="${FLAG_PATTERNS:-[\"password\\\\s*=\",\"secret\\\\s*=\",\"private_key\",\"BEGIN RSA PRIVATE\",\"BEGIN EC PRIVATE\",\"ghp_[a-zA-Z0-9]{36}\",\"ghs_[a-zA-Z0-9]{,520}\",\"gho_[a-zA-Z0-9]{36}\",\"ghu_[a-zA-Z0-9]{36}\",\"glpat-[a-zA-Z0-9_-]{20}\"]}"
-SIZE_THRESHOLDS="${SIZE_THRESHOLDS:-{\"xs\":10,\"s\":50,\"m\":200,\"l\":500}}"
+# Avoid brace-expansion/parameter-expansion ambiguity for JSON defaults. A
+# literal trailing brace here corrupts JSON and makes every automation stage
+# silently fall back to empty labels/reviewer/risk-pattern results.
+if [[ -z "${REVIEWERS_MAP:-}" ]]; then REVIEWERS_MAP='{}'; fi
+if [[ -z "${TEAM_REVIEWERS:-}" ]]; then TEAM_REVIEWERS='{}'; fi
+if [[ -z "${AUTO_MERGE_PATTERNS:-}" ]]; then AUTO_MERGE_PATTERNS='["^docs/","^README","^CHANGELOG","\\.md$","^scripts/update-","^\\.github/workflows/update-","^\\.github/workflows/rotate-"]'; fi
+if [[ -z "${LABEL_MAP:-}" ]]; then LABEL_MAP='{"\.github/workflows/":"ci","scripts/":"scripts","docs/":"documentation","README":"documentation","\.md$":"documentation","registered-imports":"imports"}'; fi
+if [[ -z "${FLAG_PATTERNS:-}" ]]; then FLAG_PATTERNS='["password\\s*=","secret\\s*=","private_key","BEGIN RSA PRIVATE","BEGIN EC PRIVATE","ghp_[a-zA-Z0-9]{36}","ghs_[a-zA-Z0-9]{,520}","gho_[a-zA-Z0-9]{36}","ghu_[a-zA-Z0-9]{36}","glpat-[a-zA-Z0-9_-]{20}"]'; fi
+if [[ -z "${SIZE_THRESHOLDS:-}" ]]; then SIZE_THRESHOLDS='{"xs":10,"s":50,"m":200,"l":500}'; fi
 DRY_RUN="${DRY_RUN:-false}"
 
 API="https://api.github.com"
