@@ -87,10 +87,10 @@ BDFS_ARTIFACT_DIR ?= $(CURDIR)/artifacts/bdfs
 
 .PHONY: bdfs-module
 bdfs-module: ## Build and stage BDFS .ko against configured kernel/src (no install/load)
-\t@[ -n "$(BDFS_DIR)" ] || { echo "Set BDFS_DIR=/path/to/btrfs-dwarfs-framework"; exit 1; }
-\t@[ -f "$(BDFS_DIR)/integrations/kernels/build-module.sh" ] || { echo "BDFS external-module helper not found; use the BDFS integration branch or a revision with the helper merged."; exit 1; }
-\t@[ -f "$(KERNEL_BUILD_DIR)/Makefile" ] && [ -f "$(KERNEL_BUILD_DIR)/.config" ] || { echo "Configured kernel tree not found at $(KERNEL_BUILD_DIR). Run make build-only/configuration first, or set KERNEL_BUILD_DIR explicitly."; exit 1; }
-\tbash "$(BDFS_DIR)/integrations/kernels/build-module.sh" "$(KERNEL_BUILD_DIR)" "$(BDFS_ARTIFACT_DIR)"
+	@[ -n "$(BDFS_DIR)" ] || { echo "Set BDFS_DIR=/path/to/btrfs-dwarfs-framework"; exit 1; }
+	@[ -f "$(BDFS_DIR)/integrations/kernels/build-module.sh" ] || { echo "BDFS external-module helper not found; use the BDFS integration branch or a revision with the helper merged."; exit 1; }
+	@[ -f "$(KERNEL_BUILD_DIR)/Makefile" ] && [ -f "$(KERNEL_BUILD_DIR)/.config" ] || { echo "Configured kernel tree not found at $(KERNEL_BUILD_DIR). Run make build-only/configuration first, or set KERNEL_BUILD_DIR explicitly."; exit 1; }
+	bash "$(BDFS_DIR)/integrations/kernels/build-module.sh" "$(KERNEL_BUILD_DIR)" "$(BDFS_ARTIFACT_DIR)"
 
 help:
 	@echo ""
