@@ -4,7 +4,6 @@ set -euo pipefail
 # Eggs-AI installer for Linux systems
 # Usage: curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
 
-REPO="eggs-ai"
 INSTALL_DIR="/opt/eggs-ai"
 BIN_LINK="/usr/local/bin/eggs-ai"
 SERVICE_FILE="/etc/systemd/system/eggs-ai.service"

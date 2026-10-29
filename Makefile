@@ -25,7 +25,7 @@ endif
 
 .PHONY: all build build-only fetch clean distclean help \
         profile-desktop profile-gaming profile-server profile-rt profile-rog \
-        lint shellcheck
+        lint shellcheck bdfs-module
 
 ## Default: full build + install
 all: build
@@ -73,6 +73,24 @@ shellcheck:
 	  -exec shellcheck -x {} +
 
 lint: shellcheck
+
+# ── Btrfs-DwarFS Framework (BDFS) external module ─────────────────────────────
+# Requires a configured kernel/src tree and BDFS checkout with the shared helper.
+BDFS_DIR ?= $(shell \
+    if [ -f "$(CURDIR)/../btrfs-dwarfs-framework/integrations/kernels/build-module.sh" ]; then \
+        echo "$(CURDIR)/../btrfs-dwarfs-framework"; \
+    elif [ -f "$(CURDIR)/../../btrfs-dwarfs-framework/integrations/kernels/build-module.sh" ]; then \
+        echo "$(CURDIR)/../../btrfs-dwarfs-framework"; \
+    else echo ""; fi)
+KERNEL_BUILD_DIR ?= $(CURDIR)/kernel/src
+BDFS_ARTIFACT_DIR ?= $(CURDIR)/artifacts/bdfs
+
+.PHONY: bdfs-module
+bdfs-module: ## Build and stage BDFS .ko against configured kernel/src (no install/load)
+	@[ -n "$(BDFS_DIR)" ] || { echo "Set BDFS_DIR=/path/to/btrfs-dwarfs-framework"; exit 1; }
+	@[ -f "$(BDFS_DIR)/integrations/kernels/build-module.sh" ] || { echo "BDFS external-module helper not found; use the BDFS integration branch or a revision with the helper merged."; exit 1; }
+	@[ -f "$(KERNEL_BUILD_DIR)/Makefile" ] && [ -f "$(KERNEL_BUILD_DIR)/.config" ] || { echo "Configured kernel tree not found at $(KERNEL_BUILD_DIR). Run make build-only/configuration first, or set KERNEL_BUILD_DIR explicitly."; exit 1; }
+	bash "$(BDFS_DIR)/integrations/kernels/build-module.sh" "$(KERNEL_BUILD_DIR)" "$(BDFS_ARTIFACT_DIR)"
 
 help:
 	@echo ""
