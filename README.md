@@ -1,4 +1,3 @@
-[update-readmes]   Mode: rewrite — migrating to template structure...
 # liqxanmod
 
 [![AI agent ready](https://img.shields.io/badge/AI_agent-ready-2ea44f?style=flat-square)](https://github.com/Interested-Deving-1896/fork-sync-all/blob/main/DOCS/ai-agent-badges.md)
