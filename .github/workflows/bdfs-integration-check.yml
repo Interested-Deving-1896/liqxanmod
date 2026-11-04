@@ -1,0 +1,56 @@
+name: BDFS integration target checks
+
+on:
+  push:
+    branches:
+      - integration/bdfs-external-module
+    paths:
+      - "Makefile"
+      - ".github/workflows/bdfs-integration-check.yml"
+  pull_request:
+    paths:
+      - "Makefile"
+      - ".github/workflows/bdfs-integration-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  make-target:
+    name: Validate BDFS Make target and helper
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out LiqXanMod
+        uses: actions/checkout@v4
+
+      - name: Check out BDFS integration helper
+        uses: actions/checkout@v4
+        with:
+          repository: Interested-Deving-1896/btrfs-dwarfs-framework
+          ref: integration/external-kernel-module-build
+          path: btrfs-dwarfs-framework
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+
+      - name: Validate helper shell syntax
+        run: |
+          bash -n btrfs-dwarfs-framework/integrations/kernels/build-module.sh
+          shellcheck btrfs-dwarfs-framework/integrations/kernels/build-module.sh
+
+      - name: Validate Makefile target parses
+        run: |
+          make -n bdfs-module \
+            BDFS_DIR="$GITHUB_WORKSPACE/btrfs-dwarfs-framework" \
+            KERNEL_BUILD_DIR="$GITHUB_WORKSPACE" \
+            BDFS_ARTIFACT_DIR="$RUNNER_TEMP/bdfs-artifacts"
+
+      - name: Verify helper rejects an unconfigured kernel tree
+        run: |
+          set +e
+          bash btrfs-dwarfs-framework/integrations/kernels/build-module.sh "$RUNNER_TEMP/no-kernel-tree"
+          status=$?
+          set -e
+          test "$status" -eq 2
