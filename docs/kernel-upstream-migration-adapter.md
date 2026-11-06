@@ -33,3 +33,13 @@ The current `scripts/apply-patches.sh` warns and skips missing patch files. It a
 - **Stage 3 — validation:** config resolution, architecture/toolchain build, module compatibility, and boot/runtime evidence where available.
 
 No kernel source or patch is changed by this documentation.
+## KUMBE manifest v1.1 mapping
+
+Emit distinct `source_inputs` records; never synthesize one combined source identity:
+
+- `kernel-source`: XanMod GitLab repository, selected lane/ref, and resolved full commit.
+- `liquorix-zen-patches`: independently versioned Liquorix/Zen patch origin and immutable commit or archive digest.
+- `provider-patches`: LiqXanMod core/hybrid patch queue, with its own immutable repository commit or archive digest.
+- `config-bundle`: selected base, architecture, feature, and hardware config inputs, pinned independently when they originate outside the provider commit.
+
+Use `integrity: verified` only when the adapter has checked the declared identity against the available trusted evidence. Otherwise preserve `unverified` or `unavailable`; the BDFS planner blocks those inputs. The planner does not itself verify signatures or hashes.
