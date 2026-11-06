@@ -85,22 +85,43 @@ def source_inventory(root: Path, warnings: list[str]) -> list[dict]:
 def patch_inventory(root: Path, warnings: list[str]) -> list[dict]:
     results = []
     for patch_root in expand_patterns(root, PATCH_PATTERNS):
+        patch_base = patch_root.resolve()
         series_files = sorted(patch_root.rglob("series"))
         entries = []
         if series_files:
             for series in series_files:
                 for line_number, raw in enumerate(series.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
-                    name = raw.strip()
-                    if not name or name.startswith("#"):
+                    try:
+                        fields = __import__("shlex").split(raw, comments=True)
+                    except ValueError as exc:
+                        warnings.append(f"Invalid quilt series line {series}:{line_number}: {exc}")
                         continue
-                    patch = series.parent / name
-                    exists = patch.is_file()
+                    if not fields:
+                        continue
+                    name, options = fields[0], fields[1:]
+                    candidate = (series.parent / name).resolve()
+                    safe = candidate.is_relative_to(patch_base)
+                    if not safe:
+                        warnings.append(f"Rejected quilt series path outside patch root: {series}:{line_number}")
+                        entries.append({
+                            "series": series.relative_to(root).as_posix(),
+                            "line": line_number,
+                            "path": name,
+                            "options": options,
+                            "present": False,
+                            "unsafe_path": True,
+                            "sha256": None,
+                        })
+                        continue
+                    exists = candidate.is_file()
                     entry = {
                         "series": series.relative_to(root).as_posix(),
                         "line": line_number,
-                        "path": patch.relative_to(root).as_posix(),
+                        "path": candidate.relative_to(root.resolve()).as_posix(),
+                        "options": options,
                         "present": exists,
-                        "sha256": sha256_file(patch) if exists else None,
+                        "unsafe_path": False,
+                        "sha256": sha256_file(candidate) if exists else None,
                     }
                     if not exists:
                         warnings.append("Missing patch referenced by series: " + entry["path"])
@@ -111,7 +132,9 @@ def patch_inventory(root: Path, warnings: list[str]) -> list[dict]:
                     "series": None,
                     "line": None,
                     "path": patch.relative_to(root).as_posix(),
+                    "options": [],
                     "present": True,
+                    "unsafe_path": False,
                     "sha256": sha256_file(patch),
                 })
         results.append({
