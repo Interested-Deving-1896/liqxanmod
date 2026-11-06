@@ -56,7 +56,7 @@ class InventoryTests(unittest.TestCase):
             patch_root = root / PATCH_PATH
             patch_root.mkdir(parents=True)
             (patch_root / "0001-example.patch").write_text("patch\\n", encoding="utf-8")
-            (patch_root / "series").write_text("0001-example.patch -p1 -R\\n../outside.patch -p2\\n", encoding="utf-8")
+            (patch_root / "series").write_text("0001-example.patch -p1 -R" + chr(10) + "../outside.patch -p2" + chr(10), encoding="utf-8")
             data = self.run_inventory(root)
             entries = data["patch_sets"][0]["entries"]
             self.assertEqual(entries[0]["options"], ["-p1", "-R"])
