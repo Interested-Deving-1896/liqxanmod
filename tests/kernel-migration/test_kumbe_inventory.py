@@ -76,7 +76,16 @@ class InventoryTests(unittest.TestCase):
             (source / "Makefile").write_text("VERSION = 6\\nPATCHLEVEL = 12\\nSUBLEVEL = 4\\n", encoding="utf-8")
             subprocess.run(["git", "-C", str(source), "add", "Makefile"], check=True)
             subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
-            clean = self.run_inventory(root)["source_candidates"][0]["git"]
+            subprocess.run(["git", "-C", str(source), "remote", "add", "origin",
+                            "https://example.invalid/provider/kernel.git"], check=True)
+            inventory = self.run_inventory(root)
+            clean = inventory["source_candidates"][0]["git"]
+            source_inputs = inventory["source_inputs"]
+            self.assertEqual(len(source_inputs), 1)
+            self.assertEqual(source_inputs[0]["role"], "kernel-source")
+            self.assertEqual(source_inputs[0]["repository"], "provider/kernel")
+            self.assertEqual(source_inputs[0]["commit"], clean["commit"])
+            self.assertEqual(source_inputs[0]["integrity"], "unverified")
             self.assertRegex(clean["commit"], r"^[0-9a-f]{40,64}$")
             self.assertTrue(clean["commit_timestamp"])
             self.assertIn(clean["object_format"], {"sha1", "sha256"})
