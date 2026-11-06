@@ -79,7 +79,7 @@ on:
         default: 'all'
         options:
           - all # Every repo in Interested-Deving-1896
-          - osp-bound # Repos mirrored to OpenOS-Project-OSP (from config/gitlab-subgroups.yml)
+          - osp-bound # Repos mirrored to Interested-Deving-1896 (from config/gitlab-subgroups.yml)
           - custom # Use the "Repos" field below
 
       repos:
