@@ -68,11 +68,16 @@ def source_inventory(root: Path, warnings: list[str]) -> list[dict]:
         }
         head = git_value(source, "rev-parse", "HEAD")
         if head:
+            shallow = git_value(source, "rev-parse", "--is-shallow-repository")
+            status = git_value(source, "status", "--porcelain", "--untracked-files=all")
             item["git"] = {
                 "commit": head,
                 "branch": git_value(source, "branch", "--show-current"),
                 "remote": git_value(source, "remote", "get-url", "origin"),
-                "is_shallow": (source / ".git" / "shallow").is_file(),
+                "commit_timestamp": git_value(source, "show", "-s", "--format=%cI", "HEAD"),
+                "object_format": git_value(source, "rev-parse", "--show-object-format"),
+                "is_shallow": shallow == "true" if shallow is not None else None,
+                "working_tree_clean": status == "" if status is not None else None,
             }
         else:
             item["source_kind"] = "non-git-tree"
