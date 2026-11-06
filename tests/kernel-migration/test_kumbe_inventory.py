@@ -65,6 +65,27 @@ class InventoryTests(unittest.TestCase):
             self.assertFalse(entries[1]["present"])
             self.assertTrue(any("outside patch root" in warning for warning in data["warnings"]))
 
+    def test_git_source_provenance_reports_commit_and_dirty_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / SOURCE_PATH
+            source.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.email", "kumbe-test@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(source), "config", "user.name", "KUMBE Test"], check=True)
+            (source / "Makefile").write_text("VERSION = 6\\nPATCHLEVEL = 12\\nSUBLEVEL = 4\\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(source), "add", "Makefile"], check=True)
+            subprocess.run(["git", "-C", str(source), "commit", "-qm", "fixture"], check=True)
+            clean = self.run_inventory(root)["source_candidates"][0]["git"]
+            self.assertRegex(clean["commit"], r"^[0-9a-f]{40,64}$")
+            self.assertTrue(clean["commit_timestamp"])
+            self.assertIn(clean["object_format"], {"sha1", "sha256"})
+            self.assertFalse(clean["is_shallow"])
+            self.assertTrue(clean["working_tree_clean"])
+            (source / "untracked.txt").write_text("untracked", encoding="utf-8")
+            dirty = self.run_inventory(root)["source_candidates"][0]["git"]
+            self.assertFalse(dirty["working_tree_clean"])
+
     def test_missing_patch_is_reported_not_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
