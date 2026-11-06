@@ -66,7 +66,8 @@ def source_inventory(root: Path, warnings: list[str]) -> list[dict]:
             "kernel_version": kernel_version(source),
             "git": None,
         }
-        head = git_value(source, "rev-parse", "HEAD")
+        top = git_value(source, "rev-parse", "--show-toplevel")
+        head = git_value(source, "rev-parse", "HEAD") if top and Path(top).resolve() == source.resolve() else None
         if head:
             shallow = git_value(source, "rev-parse", "--is-shallow-repository")
             status = git_value(source, "status", "--porcelain", "--untracked-files=all")
@@ -165,6 +166,77 @@ def config_inventory(root: Path) -> list[dict]:
     return results
 
 
+
+def normalize_git_remote(remote: str | None) -> str | None:
+    if not remote:
+        return None
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", remote):
+        return remote
+    match = re.fullmatch(r"git@([^:]+):(.+)", remote)
+    if match:
+        return f"ssh://git@{match.group(1)}/{match.group(2)}"
+    return None
+
+
+def git_source_input(path: Path, input_id: str, role: str,
+                     kernel_version_value: str | None = None) -> dict | None:
+    top = git_value(path, "rev-parse", "--show-toplevel")
+    if not top or Path(top).resolve() != path.resolve():
+        return None
+    commit = git_value(path, "rev-parse", "HEAD")
+    remote = normalize_git_remote(git_value(path, "remote", "get-url", "origin"))
+    if not commit or not re.fullmatch(r"(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})", commit) or not remote:
+        return None
+    branch = git_value(path, "branch", "--show-current")
+    clean_url = re.sub(r"\.git$", "", remote)
+    repository = "/".join(clean_url.rstrip("/").split("/")[-2:])
+    return {
+        "input_id": input_id,
+        "role": role,
+        "kind": "git",
+        "repository": repository,
+        "url": remote,
+        "ref": branch or "HEAD",
+        "commit": commit,
+        "kernel_version": kernel_version_value,
+        "integrity": "unverified",
+        "notes": [
+            "Commit identity was read from the local checkout.",
+            "The adapter did not fetch the remote or independently verify that the remote advertises this object."
+        ]
+    }
+
+
+def source_input_inventory(root: Path, sources: list[dict], patch_sets: list[dict],
+                           configs: list[dict], warnings: list[str]) -> list[dict]:
+    inputs = []
+    kernel_index = 0
+    for candidate in sources:
+        path = root / candidate["path"]
+        record = git_source_input(
+            path, f"kernel-source-{kernel_index + 1}", "kernel-source",
+            candidate.get("kernel_version")
+        )
+        if record:
+            inputs.append(record)
+            kernel_index += 1
+    if patch_sets:
+        record = git_source_input(root, "provider-patches", "provider-patches")
+        if record:
+            inputs.append(record)
+        else:
+            warnings.append("Patch queue files were inventoried locally, but no immutable provider-repository Git identity with an origin URL was available.")
+    if configs:
+        record = git_source_input(root, "config-bundle", "config-bundle")
+        if record:
+            inputs.append(record)
+        else:
+            warnings.append("Configuration files were inventoried locally, but no immutable provider-repository Git identity with an origin URL was available.")
+    if not any(item["role"] == "kernel-source" for item in inputs):
+        warnings.append("No independently identified kernel-source Git input was emitted; archive inputs require an exact archive version and SHA-256 before they can be represented in manifest v1.1.")
+    return inputs
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1],
@@ -176,13 +248,14 @@ def main() -> int:
 
     warnings: list[str] = []
     result = {
-        "inventory_schema_version": "1.0.0",
+        "inventory_schema_version": "1.1.0",
         "provider": PROVIDER,
         "observed_at": datetime.now(timezone.utc).isoformat(),
         "read_only": True,
         "source_candidates": source_inventory(root, warnings),
         "patch_sets": patch_inventory(root, warnings),
         "config_inputs": config_inventory(root),
+        "source_inputs": [],
         "warnings": warnings,
         "limitations": [
             "No network requests, source fetches, patch application, builds, or writes are performed.",
@@ -191,6 +264,11 @@ def main() -> int:
             "This inventory is evidence input, not a validated migration manifest."
         ],
     }
+    result["source_inputs"] = source_input_inventory(
+        root, result["source_candidates"], result["patch_sets"],
+        result["config_inputs"], warnings
+    )
+    result["warnings"] = warnings
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
