@@ -239,7 +239,7 @@ tiers:
     tier: 3
   - name: "Sync FSA Forks"
     tier: 3
-  - name: "Sync pieroproietti Forks"
+  - name: "Sync Interested-Deving-1896 Forks"
     tier: 3
   - name: "Sync Registry Backend"
     tier: 3
