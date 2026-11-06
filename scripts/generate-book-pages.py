@@ -281,7 +281,7 @@ def generate_subgroup_map(subgroups_path: str, now: str) -> str:
         lines.append("| Repo | GitHub | GitLab |")
         lines.append("|---|---|---|")
         for repo in sorted(repos):
-            gh_url = f"https://github.com/OpenOS-Project-OSP/{repo}"
+            gh_url = f"https://github.com/Interested-Deving-1896/{repo}"
             gl_url = f"{GITLAB_BASE}/{slug}/{repo}"
             lines.append(f"| `{repo}` | [GitHub]({gh_url}) | [GitLab]({gl_url}) |")
         lines.append("")
@@ -533,8 +533,8 @@ GLOSSARY_TERMS = [
     ("MIN_QUOTA", "Minimum remaining REST quota required before a workflow proceeds. Set per-workflow in `config/workflow-quota-costs.yml`. Typically 500–1500."),
     ("mirror chain", "Three-org pipeline: Interested-Deving-1896 → OpenOS-Project-OSP (GitHub) → openos-project (GitLab). Managed by mirror-to-osp.yml, mirror-osp-to-gitlab.yml."),
     ("node identity", "The position of a fork-sync-all instance in the mirror chain. See `fsa-node-identity.sh`. Determines which operations the instance runs."),
-    ("OOC", "OpenOS-Project-Ecosystem-OOC — the third org in the mirror chain (GitHub). Receives mirrors from OSP."),
-    ("OSP", "OpenOS-Project-OSP — the second org in the mirror chain (GitHub). Receives mirrors from Interested-Deving-1896."),
+    ("OOC", "Interested-Deving-1896 — the third org in the mirror chain (GitHub). Receives mirrors from OSP."),
+    ("OSP", "Interested-Deving-1896 — the second org in the mirror chain (GitHub). Receives mirrors from Interested-Deving-1896."),
     ("OSP-bound repo", "A repo in Interested-Deving-1896 that is mirrored into OSP and managed by fork-sync-all (README updates, badge injection, CI checks, etc.)."),
     ("OTA", "Over-the-air update system. Delivers workflow and config updates from fork-sync-all to consumer repos without requiring manual PRs."),
     ("platform-adapter.sh", "Uniform interface for GitHub, GitLab, Gitea, Forgejo, and Codeberg. Abstracts API differences behind a common shell interface."),
