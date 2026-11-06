@@ -27,5 +27,5 @@ jobs:
           python-version: "3.12"
       - name: Run inventory tests
         run: python -m unittest discover -s tests/kernel-migration -p "test_kumbe_inventory.py" -v
-      - name: Verify JSON output
-        run: python scripts/kumbe-inventory.py --help
+      - name: Generate and parse local inventory
+        run: python scripts/kumbe-inventory.py | python -m json.tool > /dev/null
