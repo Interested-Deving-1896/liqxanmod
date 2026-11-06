@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[1] / "kumbe-inventory.py"
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "kumbe-inventory.py"
 PROVIDER = "liqxanmod"
 SOURCE_PATH = "kernel/src"
 PATCH_PATH = "patches"
