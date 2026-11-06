@@ -50,6 +50,21 @@ class InventoryTests(unittest.TestCase):
             self.assertTrue(entry["present"])
             self.assertEqual(entry["sha256"], hashlib.sha256(patch.read_bytes()).hexdigest())
 
+    def test_quilt_options_and_path_traversal_are_handled_safely(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            patch_root = root / PATCH_PATH
+            patch_root.mkdir(parents=True)
+            (patch_root / "0001-example.patch").write_text("patch\\n", encoding="utf-8")
+            (patch_root / "series").write_text("0001-example.patch -p1 -R\\n../outside.patch -p2\\n", encoding="utf-8")
+            data = self.run_inventory(root)
+            entries = data["patch_sets"][0]["entries"]
+            self.assertEqual(entries[0]["options"], ["-p1", "-R"])
+            self.assertTrue(entries[0]["present"])
+            self.assertTrue(entries[1]["unsafe_path"])
+            self.assertFalse(entries[1]["present"])
+            self.assertTrue(any("outside patch root" in warning for warning in data["warnings"]))
+
     def test_missing_patch_is_reported_not_accepted(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
