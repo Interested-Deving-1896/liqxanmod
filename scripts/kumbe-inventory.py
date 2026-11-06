@@ -41,7 +41,7 @@ def kernel_version(source: Path) -> str | None:
         return None
     values: dict[str, str] = {}
     for line in makefile.read_text(encoding="utf-8", errors="replace").splitlines():
-        match = re.match(r"^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)\\s*=\\s*(.*?)\\s*$", line)
+        match = re.match(r"^(VERSION|PATCHLEVEL|SUBLEVEL|EXTRAVERSION)\s*=\s*(.*?)\s*$", line)
         if match:
             values[match.group(1)] = match.group(2)
     if "VERSION" not in values or "PATCHLEVEL" not in values:
