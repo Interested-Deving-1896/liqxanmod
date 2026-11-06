@@ -30,7 +30,7 @@ def git_value(path: Path, *args: str) -> str | None:
             ["git", "-C", str(path), *args],
             check=True, capture_output=True, text=True, timeout=5,
         )
-        return result.stdout.strip() or None
+        return result.stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return None
 
