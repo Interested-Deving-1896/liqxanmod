@@ -1243,7 +1243,7 @@ workflows:
   cost_mid: 15
   cost_high: 30
   basis: code-audit
-  synopsis: Rebases the all-features branch onto the upstream master after each pieroproietti
+  synopsis: Rebases the all-features branch onto the upstream master after each Interested-Deving-1896
     sync, then force-pushes the result to the lts branch.
 - name: Reconcile Identity Assets
   min_quota: 10
@@ -1479,7 +1479,7 @@ workflows:
   basis: code-audit
   synopsis: Triggered by repository_dispatch from penguins-eggs when docs/chromiumos/
     changes on all-features. Syncs the updated docs into the penguins-eggs-book repo.
-- name: Sync pieroproietti Forks
+- name: Sync Interested-Deving-1896 Forks
   min_quota: 100
   cost_low: 10
   cost_mid: 40
@@ -1487,9 +1487,9 @@ workflows:
   basis: code-audit
   notes: merge-upstream per fork branch
   synopsis: Syncs all penguins-eggs forks owned by Interested-Deving-1896 with their
-    upstream pieroproietti sources via merge-upstream.
+    upstream Interested-Deving-1896 sources via merge-upstream.
 - name: Sync Pieroproietti GitLab Forks
-  workflow_file: sync-pieroproietti-gl-forks.yml
+  workflow_file: sync-Interested-Deving-1896-gl-forks.yml
   min_quota: 100
   cost_low: 5
   cost_mid: 15
@@ -1497,7 +1497,7 @@ workflows:
   basis: code-audit
   notes: '3 repos: penguins-eggs, penguins-eggs-book, oa-tools. Git push + GitLab
     release create per new tag.'
-  synopsis: Syncs the three pieroproietti GitLab forks (penguins-eggs, penguins-eggs-book,
+  synopsis: Syncs the three Interested-Deving-1896 GitLab forks (penguins-eggs, penguins-eggs-book,
     oa-tools) from their GitHub upstreams. Mirrors branches, tags, and creates GitLab
     Releases for new tags.
 - name: Sync Registered Imports
