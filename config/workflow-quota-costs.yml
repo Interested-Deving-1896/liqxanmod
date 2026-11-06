@@ -862,7 +862,7 @@ workflows:
   basis: code-audit
   notes: Batched exact GraphQL lookups for configured repos + description reads for
     missing destinations
-  synopsis: Mirrors configured OSP-bound repos from Interested-Deving-1896 to OpenOS-Project-OSP
+  synopsis: Mirrors configured OSP-bound repos from Interested-Deving-1896 to Interested-Deving-1896
     and OpenOS-Project-Ecosystem-OOC using bare clone + push --mirror.
 - name: Mirror OSP → GitLab
   min_quota: 1500
@@ -922,7 +922,7 @@ workflows:
   cost_high: 0
   basis: code-audit
   notes: Git pushes use the Git transport and do not consume REST quota.
-  synopsis: Mirrors btrfs-dwarfs-framework from OpenOS-Project-OSP back to Interested-Deving-1896.
+  synopsis: Mirrors btrfs-dwarfs-framework from Interested-Deving-1896 back to Interested-Deving-1896.
 - name: Mirror to OpenOS-Project-OSP
   workflow_file: mirror.yaml
   min_quota: 500
