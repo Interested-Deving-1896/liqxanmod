@@ -1,0 +1,31 @@
+name: KUMBE provider inventory
+
+on:
+  pull_request:
+    paths:
+      - "scripts/kumbe-inventory.py"
+      - "tests/kernel-migration/**"
+      - ".github/workflows/kumbe-inventory.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/kumbe-inventory.py"
+      - "tests/kernel-migration/**"
+      - ".github/workflows/kumbe-inventory.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Test read-only KUMBE inventory
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Run inventory tests
+        run: python -m unittest discover -s tests/kernel-migration -p "test_kumbe_inventory.py" -v
+      - name: Verify JSON output
+        run: python scripts/kumbe-inventory.py --help
