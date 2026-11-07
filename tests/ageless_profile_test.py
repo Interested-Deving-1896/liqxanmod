@@ -46,3 +46,45 @@ elif provider == "xanmod":
 elif provider == "liqxanmod":
     assert profile["provider_constraints"]["kernel_lane_must_be_resolved_from_provider_manifest"] is True
 print("liqxanmod Ageless compatibility invariants: PASS")
+
+
+# Verify the provider consumes a BDFS-generated report and keeps actions disabled.
+import subprocess
+import tempfile
+report_fixture = {
+    "schema_version": 1,
+    "profile": "bdfs.ageless-provider-compatibility-report",
+    "compatibility_status": "unknown",
+    "safety": {"read_only": True},
+    "reports": {
+        "liqxanmod": {
+            "provider": "liqxanmod",
+            "provider_profile": "liqxanmod",
+            "compatibility_status": "unknown",
+            "support_status": "inventory-only",
+            "inventory_complete": True,
+            "missing_required_inventory_fields": [],
+            "base_os": {"id": "debian", "release": "13"},
+            "architecture": "x86_64",
+            "kernel": {"release": None, "source": None, "abi": None},
+            "provider_constraints": profile["provider_constraints"],
+            "decision": "inventory is descriptive only; provider-specific isolated evidence is absent",
+            "actions": {
+                "conversion": False, "patch_apply": False, "build": False, "install": False, "publish": False
+            }
+        }
+    }
+}
+with tempfile.TemporaryDirectory() as tmp:
+    report_path = Path(tmp) / "bdfs-report.json"
+    report_path.write_text(json.dumps(report_fixture), encoding="utf-8")
+    consumed = subprocess.run(
+        [sys.executable, str(ROOT / "integrations/ageless-linux-report.py"), "--report", str(report_path)],
+        check=True, capture_output=True, text=True,
+    )
+    decision = json.loads(consumed.stdout)
+    assert decision["provider"] == "liqxanmod"
+    assert decision["compatibility_status"] == "unknown"
+    assert decision["bdfs_inventory_complete"] is True
+    assert decision["actions"]["build"] is False
+    assert decision["actions"]["install"] is False
