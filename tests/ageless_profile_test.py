@@ -20,6 +20,15 @@ assert re.fullmatch(r"[0-9a-f]{40}", profile["ageless_source"]["tree"])
 assert profile["ageless_source"]["commit_signature"] == "unsigned"
 assert profile["ageless_source"]["integrity"] == "content-addressed-but-not-authenticated"
 assert profile["base_os"]["converted_id_is_authoritative"] is False
+contract = profile["inventory_contract"]
+assert contract["producer"] == "bdfs.integrations.ageless-linux.inventory"
+assert contract["schema_version"] == 1
+assert set(contract["required_fields"]) == {
+    "distribution.id", "distribution.release", "architecture", "package_manager", "init_system"
+}
+assert contract["null_semantics"] == "unknown; never infer provider support"
+assert contract["build_or_install_authorized"] is False
+assert profile["compatibility_status"] == "unknown"
 required = {"distribution_id", "release", "architecture", "package_manager", "init_system"}
 assert required.issubset(set(profile["base_os"]["required_fields"]))
 for key in ("execute_conversion", "execute_upstream_tests_on_runner", "patch_apply", "build", "install", "publish"):
