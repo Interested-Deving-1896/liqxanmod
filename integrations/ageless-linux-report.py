@@ -50,7 +50,7 @@ def main() -> int:
     parser.add_argument("--report", required=True, type=Path, help="BDFS compatibility report JSON")
     parser.add_argument("--output", type=Path, help="write provider decision to this path; stdout otherwise")
     args = parser.parse_args()
-    result = json.dumps(consume(json.loads(args.report.read_text(encoding="utf-8"))), indent=2, sort_keys=True) + "\\n"
+    result = json.dumps(consume(json.loads(args.report.read_text(encoding="utf-8"))), indent=2, sort_keys=True)
     if args.output:
         args.output.write_text(result, encoding="utf-8")
     else:
