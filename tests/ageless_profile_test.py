@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+provider = "liqxanmod"
 profile = json.loads((ROOT / "integrations/ageless-linux-compatibility.json").read_text())
 doc = ROOT / "integrations/ageless-linux-kernel-compatibility.md"
 audit = ROOT / "integrations/ageless-linux-upstream-audit.md"
