@@ -26,3 +26,13 @@ Never execute the privileged conversion script on CI hosts or production systems
 - https://github.com/agelesslinux/agelesslinux.org
 - https://agelesslinux.github.io/
 - https://github.com/agelesslinux/store.agelesslinux.org
+
+## Consuming the BDFS compatibility report
+
+BDFS can generate a provider-keyed report from its read-only inventory and this repository's `integrations/ageless-linux-compatibility.json` contract. Consume the generated report with:
+
+```sh
+python3 integrations/ageless-linux-report.py --report ageless-provider-compatibility.json --output liqxanmod-ageless-decision.json
+```
+
+The adapter verifies the BDFS report schema, provider identity, unknown compatibility status, and disabled conversion/build/install/publish actions. It emits a provider-specific decision artifact only; it does not select a kernel, apply patches, build, install, or certify support. Keep compatibility unknown until isolated tests and independently verified source/package provenance are available.
