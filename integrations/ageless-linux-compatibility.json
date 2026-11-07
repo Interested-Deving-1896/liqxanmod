@@ -41,5 +41,25 @@
     "architecture",
     "kernel-provider-source-identity",
     "isolated-test-report"
-  ]
+  ],
+  "inventory_contract": {
+    "producer": "bdfs.integrations.ageless-linux.inventory",
+    "schema_version": 1,
+    "required_fields": [
+      "distribution.id",
+      "distribution.release",
+      "architecture",
+      "package_manager",
+      "init_system"
+    ],
+    "optional_fields": [
+      "distribution.id_like",
+      "kernel.release",
+      "kernel.source",
+      "kernel.abi"
+    ],
+    "null_semantics": "unknown; never infer provider support",
+    "compatibility_gate": "remain-unknown-until-provider-specific-isolated-evidence",
+    "build_or_install_authorized": false
+  }
 }
