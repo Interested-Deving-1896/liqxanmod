@@ -1,0 +1,24 @@
+name: Ageless profile validation
+
+on:
+  pull_request:
+    paths:
+      - 'integrations/ageless-linux/**'
+      - 'integrations/ageless-linux-*.json'
+      - 'integrations/ageless-linux-*.md'
+      - 'tests/ageless_profile_test.py'
+      - '.github/workflows/ageless-profile-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Validate Ageless profile invariants
+        run: python3 tests/ageless_profile_test.py

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "profile": "ageless-linux",
+  "integration_kind": "base-os-compatibility-metadata",
+  "provider": "liqxanmod",
+  "support_status": "inventory-only",
+  "compatibility_status": "unknown",
+  "ageless_source": {
+    "repository": "https://github.com/agelesslinux/agelesslinux",
+    "commit": "1e1b00f45d494a41412403e9e909b0cc737bc2ae",
+    "tree": "71591363ccff54a7a0cfbeffbdc7fd36b087f523",
+    "commit_signature": "unsigned",
+    "integrity": "content-addressed-but-not-authenticated"
+  },
+  "base_os": {
+    "identity_source": "trusted-pre-conversion-image-manifest-or-preserved-os-release",
+    "required_fields": [
+      "distribution_id",
+      "release",
+      "architecture",
+      "package_manager",
+      "init_system"
+    ],
+    "converted_id_is_authoritative": false
+  },
+  "provider_constraints": {
+    "kernel_lane_must_be_resolved_from_provider_manifest": true
+  },
+  "safety": {
+    "inventory_only": true,
+    "execute_conversion": false,
+    "execute_upstream_tests_on_runner": false,
+    "isolated_test_environment_required": true,
+    "patch_apply": false,
+    "build": false,
+    "install": false,
+    "publish": false
+  },
+  "evidence_required": [
+    "base-image-digest",
+    "architecture",
+    "kernel-provider-source-identity",
+    "isolated-test-report"
+  ],
+  "inventory_contract": {
+    "producer": "bdfs.integrations.ageless-linux.inventory",
+    "schema_version": 1,
+    "required_fields": [
+      "distribution.id",
+      "distribution.release",
+      "architecture",
+      "package_manager",
+      "init_system"
+    ],
+    "optional_fields": [
+      "distribution.id_like",
+      "kernel.release",
+      "kernel.source",
+      "kernel.abi"
+    ],
+    "null_semantics": "unknown; never infer provider support",
+    "compatibility_gate": "remain-unknown-until-provider-specific-isolated-evidence",
+    "build_or_install_authorized": false
+  }
+}
