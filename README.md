@@ -106,7 +106,7 @@ Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-
 ## Origins
 
 <!-- AI:start:origins -->
-_Original project — no upstream influences recorded._
+See [Kernel source integration map](docs/kernel-source-integrations.md) for the canonical Linux baseline, the downstream linux-merge candidate, and the existing XanMod/Liquorix source roles. Current build defaults remain unchanged; new sources are documented candidates, not selectable build inputs.
 <!-- AI:end:origins -->
 
 ## Resources
